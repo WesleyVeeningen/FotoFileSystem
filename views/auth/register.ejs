@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel='stylesheet' href='/stylesheets/output.css' />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+</head>
+
+<body class="h-screen flex items-center justify-center bg-gray-100">
+
+    <main class="container mx-auto flex justify-center">
+        <div class="w-full max-w-md bg-white p-8 rounded-lg shadow-lg">
+            <h1 class="text-3xl font-bold mb-6 text-center">Register</h1>
+            <form action="/auth/register" method="POST" class="flex w-full flex-col">
+                <div class="mb-4">
+                    <label for="username" class="block mb-2">Username:</label>
+                    <input type="text" id="username" name="username" class="form-input w-full"
+                        value="<%= typeof username != 'undefined' ? username : '' %>" />
+                    <% if (errors.username) { %>
+                        <p class="text-red-500 text-sm">
+                            <%= errors.username %>
+                        </p>
+                        <% } %>
+                </div>
+                <div class="mb-4">
+                    <label for="email" class="block mb-2">Email:</label>
+                    <input type="email" id="email" name="email" class="form-input w-full"
+                        value="<%= typeof email != 'undefined' ? email : '' %>" />
+                    <% if (errors.email) { %>
+                        <p class="text-red-500 text-sm">
+                            <%= errors.email %>
+                        </p>
+                        <% } %>
+                </div>
+                <div class="mb-4">
+                    <label for="password" class="block mb-2">Password:</label>
+                    <input type="password" id="password" name="password" class="form-input w-full" />
+                    <% if (errors.password) { %>
+                        <p class="text-red-500 text-sm">
+                            <%= errors.password %>
+                        </p>
+                        <% } %>
+                </div>
+                <div class="mb-4">
+                    <label for="confirm" class="block mb-2">Confirm Password:</label>
+                    <input type="password" id="confirm" name="confirm" class="form-input w-full" />
+                    <% if (errors.confirm) { %>
+                        <p class="text-red-500 text-sm">
+                            <%= errors.confirm %>
+                        </p>
+                        <% } %>
+                </div>
+                <div class="mb-4">
+                    <button
+                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-full">Register</button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+
+</body>
+
+</html>
