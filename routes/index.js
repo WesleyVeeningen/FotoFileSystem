@@ -18,15 +18,41 @@ router.get('/home', async function (req, res, next) {
 });
 
 
+// Display file upload form
+router.get('/files/:folderName', async (req, res) => {
+  try {
+    const folderName = req.params.folderName;
 
+    // Find files belonging to the specified folder
+    const files = await File.find({ folder: folderName });
+
+    res.json(files);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Internal Server Error' });
+  }
+});
+
+// Other routes...
+
+module.exports = router;
+
+
+// Display file upload form
 // Display file upload form
 router.get('/files', async (req, res, next) => {
 
-  // Fetch file information from MongoDB
-  const files = await File.find();
-  res.render('files', { title: 'Upload File', username: req.session.username, files });
-
+  try {
+    // Fetch file information from MongoDB
+    const folders = await Folder.find();
+    const files = await File.find();
+    res.render('files', { title: 'Upload File', username: req.session.username, folders, files });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Internal Server Error');
+  }
 });
+
 
 // Ensure the existence of the temporary folder
 const tempFolderPath = path.join(__dirname, '../public/temp');
@@ -50,6 +76,11 @@ router.post('/files', uploadTemp.single('foto'), async (req, res, next) => {
   try {
     if (!req.file) {
       return res.status(400).send('No file uploaded.');
+    }
+
+    // Check if the uploaded file is an image or video
+    if (!req.file.mimetype.startsWith('image') && !req.file.mimetype.startsWith('video')) {
+      return res.status(400).send('Unsupported file type.');
     }
 
     // Get the filename and path of the uploaded file
@@ -109,6 +140,8 @@ router.post('/files', uploadTemp.single('foto'), async (req, res, next) => {
     res.status(500).send('Internal Server Error');
   }
 });
+
+
 
 
 

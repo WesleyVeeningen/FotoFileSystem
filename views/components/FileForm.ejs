@@ -5,43 +5,52 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>File Information and Folder Selection</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
 
-<body>
-    <h1>File Information</h1>
-    <form action="/moveFile" method="POST" id="fileInfoForm">
-        <div>
-            <label for="fileName">File Name:</label>
-            <input type="text" id="fileName" name="fileName" value="<%= fileInfo.name %>" readonly>
-        </div>
-        <div>
-            <label for="fileType">File Type:</label>
-            <input type="text" id="fileType" name="fileType" value="<%= fileInfo.type %>" readonly>
-        </div>
-        <div>
-            <label for="fileSize">File Size:</label>
-            <input type="text" id="fileSize" name="fileSize" value="<%= fileInfo.size %> bytes" readonly>
-        </div>
-        <div>
-            <label for="Uploaded at">Uploaded at:</label>
-            <input type="datetime-local" id="uploadedAt" name="uploadedAt">
-        </div>
-        <div>
-            <label for="originDate">Origin Date:</label>
-            <input type="datetime-local" id="originDate" name="originDate" value="<%= fileInfo.originDate %>">
-        </div>
-        <div>
-            <label for="folder">Select Folder:</label>
-            <select id="folder" name="folder">
-                <% folders.forEach(folder=> { %>
-                    <option value="<%= folder.name %>">
-                        <%= folder.name %>
-                    </option>
-                    <% }); %>
-            </select>
-        </div>
-        <button type="submit">Move File</button>
-    </form>
+<body class="bg-gray-100 h-screen flex flex-col justify-center items-center">
+    <div class="max-w-md bg-white p-8 rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold mb-4">File Information</h1>
+        <form action="/moveFile" method="POST" id="fileInfoForm">
+            <div class="mb-4">
+                <label for="fileName" class="block text-gray-700">File Name:</label>
+                <input type="text" id="fileName" name="fileName" value="<%= fileInfo.name %>" readonly
+                    class="w-full border-gray-300 rounded-lg py-2 px-4">
+            </div>
+            <div class="mb-4">
+                <label for="fileType" class="block text-gray-700">File Type:</label>
+                <input type="text" id="fileType" name="fileType" value="<%= fileInfo.type %>" readonly
+                    class="w-full border-gray-300 rounded-lg py-2 px-4">
+            </div>
+            <div class="mb-4">
+                <label for="fileSize" class="block text-gray-700">File Size:</label>
+                <input type="text" id="fileSize" name="fileSize" value="<%= fileInfo.size %> bytes" readonly
+                    class="w-full border-gray-300 rounded-lg py-2 px-4">
+            </div>
+            <div class="mb-4">
+                <label for="uploadedAt" class="block text-gray-700">Uploaded at:</label>
+                <input type="datetime-local" id="uploadedAt" name="uploadedAt"
+                    class="w-full border-gray-300 rounded-lg py-2 px-4">
+            </div>
+            <div class="mb-4">
+                <label for="originDate" class="block text-gray-700">Origin Date:</label>
+                <input type="datetime-local" id="originDate" name="originDate" value="<%= fileInfo.originDate %>"
+                    class="w-full border-gray-300 rounded-lg py-2 px-4">
+            </div>
+            <div class="mb-4">
+                <label for="folder" class="block text-gray-700">Select Folder:</label>
+                <select id="folder" name="folder" class="w-full border-gray-300 rounded-lg py-2 px-4">
+                    <% folders.forEach(folder=> { %>
+                        <option value="<%= folder.name %>">
+                            <%= folder.name %>
+                        </option>
+                        <% }); %>
+                </select>
+            </div>
+            <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg">Move
+                File</button>
+        </form>
+    </div>
 
     <script>
         // Get the current date and format it as YYYY-MM-DDTHH:MM
