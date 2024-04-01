@@ -3,12 +3,27 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
+const mongoose = require('mongoose');
+const session = require('express-session');
+
+
+const uri = 'mongodb+srv://wesley:KkEftaaVJXohjAtX@fotofilesystem.cjnzdvy.mongodb.net/?retryWrites=true&w=majority';
+mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log('Connected to MongoDB Atlas'))
+  .catch(err => console.error('Error connecting to MongoDB Atlas', err));
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 let authRouter = require('./routes/auth');
 
 var app = express();
+
+
+app.use(session({
+  secret: 'secret-key',
+  resave: false,
+  saveUninitialized: false,
+}));
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));

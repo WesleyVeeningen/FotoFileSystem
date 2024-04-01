@@ -1,6 +1,9 @@
 var express = require('express');
 var router = express.Router();
-const pool = require('../database.js');
+const User = require('../models/user');
+const bcrypt = require('bcrypt');
+const session = require('express-session');
+
 
 /* GET home page. */
 router.get('/', function (req, res, next) {
@@ -14,37 +17,38 @@ router.get('/login', function (req, res, next) {
     res.render('auth/login', { title: 'Express', errors: errors });
 });
 
-router.post('/login', async function (req, res, next) {
-    let errors = { email: "", password: "" }; // Initialize errors object with empty strings
+router.post('/login', async (req, res) => {
+    const { email, password } = req.body;
 
-    if (req.body.email == "") {
-        errors.email = "Email is required.";
-    }
-    if (req.body.password == "") {
-        errors.password = "Password is required.";
-    }
+    try {
+        // Find the user by email
+        const user = await User.findOne({ email });
 
-    if (errors.email || errors.password) {
-        // Re-render the login form with errors
-        res.render('auth/login', { errors: errors });
-    } else {
-        console.log(req.body)
-        // Check if the user exists in the database
-        const { email, password } = req.body;
-
-        let user = await pool.query('SELECT * FROM users WHERE user_email = ? AND user_password = ?', [email, password]);
-        console.log(user[0])
-        if (user[0].length > 0) {
-            // User successfully logged in
-            console.log('User successfully logged in:', user[0]);
-            // Redirect to the home page or any other appropriate page after successful login
-            res.redirect('/');
-        } else {
-            // User not found
-            errors.email = "Email or password is incorrect.";
-            res.render('auth/login', { errors: errors });
+        // If user not found, return an error
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
         }
-        console.log('hi 3')
+
+        // Compare the provided password with the hashed password stored in the database
+        const isPasswordMatch = await bcrypt.compare(password, user.password);
+
+        // If passwords don't match, return an error
+        if (!isPasswordMatch) {
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
+
+        req.session.isLoggedIn = true;
+        req.session.username = user.username;
+        req.session.email = user.email;
+
+        console
+
+        // If passwords match, redirect to the home page
+        res.redirect(`/`);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 
@@ -57,42 +61,37 @@ router.get('/register', function (req, res, next) {
 });
 
 
-router.post('/register', function (req, res, next) {
-    let errors = { username: "", email: "", password: "", confirm: "" }; // Initialize errors object with empty strings
+router.post('/register', async (req, res) => {
+    const { username, email, password, confirm } = req.body;
 
-    console.log(req.body);
+    try {
+        // Check if password and confirm match
+        if (password !== confirm) {
+            return res.status(400).json({ message: 'Passwords do not match' });
+        }
 
-    if (req.body.username == "") {
-        errors.username = "Username is required.";
-    }
+        // Hash the password
+        const hashedPassword = await bcrypt.hash(password, 10);
 
-    if (req.body.email == "") {
-        errors.email = "Email is required.";
-    }
-    if (req.body.password == "") {
-        errors.password = "Password is required.";
-    }
-    if (req.body.password != req.body.confirm) {
-        errors.confirm = "Passwords do not match.";
-    }
+        // Create new user with hashed password
+        const newUser = new User({ username, email, password: hashedPassword });
+        await newUser.save();
 
-    if (errors.username || errors.email || errors.password || errors.confirm) {
-        // Re-render the registration form with errors
-        res.render('auth/register', { errors: errors });
-    } else {
-        // Insert the user into the database
-        const { username, email, password } = req.body;
-        pool.query('INSERT INTO users (user_name, user_email, user_password) VALUES (?, ?, ?)', [username, email, password], (err, result) => {
-            if (err) {
-                console.error('Error registering user:', err);
-                res.status(500).send('Error registering user');
-            } else {
-                // User successfully registered
-                res.redirect('/auth/login');
-            }
-        });
+        req.session.isLoggedIn = true;
+        req.session.username = username;
+        req.session.email = email;
+
+
+        res.redirect('/auth/login');
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
     }
 });
+
+
+
+
 
 
 
