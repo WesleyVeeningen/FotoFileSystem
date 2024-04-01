@@ -13,10 +13,13 @@
 
 <body class="bg-gray-100 max-w-screen-xl">
     <% include components/navbar.ejs %>
-        <main class="ml-[15rem] h-screen w-full py-8">
+        <main class="ml-[17rem] h-screen w-full py-8">
+            <button id="add-folder-btn" class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg mb-4">Add
+                Folder</button>
             <form action="/files" method="POST" enctype="multipart/form-data" class="mb-8">
                 <div class="flex items-center space-x-4">
-                    <input type="file" name="foto" class="border rounded-lg py-2 px-4">
+                    <input type="file" name="foto" class="border rounded-lg py-2 px-4"
+                        accept=".mp3,.mp4,image/*,video/*">
                     <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg">Upload
                         File</button>
                 </div>
@@ -55,7 +58,7 @@
                 </table>
             </div>
         </main>
-        <script>
+        <script defer>
             document.addEventListener('DOMContentLoaded', function () {
                 const folderNames = document.querySelectorAll('.folder-name');
 
@@ -77,39 +80,101 @@
                         row.classList.add('border-b', 'border-gray-200');
 
                         row.innerHTML = `
-                        <td class="px-4 py-2"><img src="/uploads/${file.folder}/thumbnails/${file.name}" alt="Thumbnail" class="w-16 h-16 object-cover"></td>
-                        <td class="px-4 py-2">${file.name}</td>
-                        <td class="px-4 py-2">${file.fileType}</td>
-                        <td class="px-4 py-2">${file.size} bytes</td>
-                        <td class="px-4 py-2">${file.createdAt}</td>
-                        <td class="px-4 py-2">${file.originDate ? file.originDate : '-'}</td>
-                        <td class="px-4 py-2">
-                            <a href="/uploads/${file.folder}/${file.name}" download class="text-blue-500 hover:text-blue-600 mr-2"><i class="fas fa-download"></i></a>
-                            <button onclick="deleteFile('${file._id}')" class="text-red-500 hover:text-red-600"><i class="fas fa-trash"></i></button>
-                        </td>
-                    `;
+                            <td class="px-4 py-2"><img src="/uploads/${file.folder}/thumbnails/${file.name}" alt="Thumbnail" class="w-16 h-16 object-cover"></td>
+                            <td class="px-4 py-2">${file.name}</td>
+                            <td class="px-4 py-2">${file.fileType}</td>
+                            <td class="px-4 py-2">${file.size} bytes</td>
+                            <td class="px-4 py-2">${file.createdAt}</td>
+                            <td class="px-4 py-2">${file.originDate ? file.originDate : '-'}</td>
+                            <td class="px-4 py-2">
+                                <a href="/uploads/${file.folder}/${file.name}" download class="text-blue-500 hover:text-blue-600 mr-2"><i class="fas fa-download"></i></a>
+                                <button data-file-id="${file._id}" class="delete-button text-red-500 hover:text-red-600"><i class="fas fa-trash"></i></button>
+                            </td>
+                        `;
 
                         filesTableBody.appendChild(row);
                     });
 
                     // Show the files container
                     document.getElementById('files-container').classList.remove('hidden');
+
+                    // Add event listeners to delete buttons
+                    const deleteButtons = document.querySelectorAll('.delete-button');
+                    deleteButtons.forEach(button => {
+                        button.addEventListener('click', async function () {
+                            const fileId = button.dataset.fileId;
+                            if (confirm(`Are you sure you want to delete this file? ${fileId}`)) {
+                                const response = await fetch(`/files/${fileId}`, { method: 'DELETE' });
+                                const data = await response.json();
+                                if (data.success) {
+                                    // Remove the deleted file row from the table
+                                    button.closest('tr').remove();
+                                } else {
+                                    alert(data.message);
+                                }
+                            }
+                        });
+                    });
                 }
 
-                async function deleteFile(fileId) {
-                    if (confirm("Are you sure you want to delete this file?")) {
-                        const response = await fetch(`/files/${fileId}`, { method: 'DELETE' });
-                        const data = await response.json();
-                        if (data.success) {
-                            window.location.reload();
-                        } else {
-                            alert(data.message);
+                // Select the Add Folder button
+                const addFolderBtn = document.getElementById('add-folder-btn');
+
+                // Add event listener to the Add Folder button
+                addFolderBtn.addEventListener('click', async function () {
+                    const folderName = prompt('Enter folder name:');
+                    if (folderName) {
+                        try {
+                            const response = await fetch('/folders', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ name: folderName })
+                            });
+                            const data = await response.json();
+                            if (data.success) {
+                                // Folder added successfully, update the UI
+                                // You may need to fetch the updated folder list and display it
+                                console.log('Folder added successfully');
+                            } else {
+                                alert(data.message);
+                            }
+                        } catch (error) {
+                            console.error('Error adding folder:', error);
+                            alert('An error occurred while adding the folder. Please try again.');
                         }
                     }
-                }
+                });
+            });
+
+            // Add event listener to delete buttons for folders
+            document.addEventListener('DOMContentLoaded', function () {
+                const deleteFolderButtons = document.querySelectorAll('.delete-folder-button');
+                deleteFolderButtons.forEach(button => {
+                    button.addEventListener('click', async function () {
+                        const folderId = button.dataset.folderId;
+                        if (confirm(`Are you sure you want to delete this folder?`)) {
+                            try {
+                                const response = await fetch(`/folders/${folderId}`, { method: 'DELETE' });
+                                const data = await response.json();
+                                if (data.success) {
+                                    // Remove the deleted folder from the UI
+                                    button.closest('.folder').remove();
+                                } else {
+                                    alert(data.message);
+                                }
+                            } catch (error) {
+                                console.error('Error deleting folder:', error);
+                                alert('An error occurred while deleting the folder. Please try again.');
+                            }
+                        }
+                    });
+                });
             });
 
         </script>
+
 </body>
 
 </html>

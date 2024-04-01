@@ -15,8 +15,6 @@
 
   <% include components/navbar.ejs %>
 
-
-
     <main class="ml-[15rem] h-screen w-full py-2 px-5">
 
       <div id="home">
@@ -27,26 +25,38 @@
       <div id="Files" class="hidden">
         <h1 class="text-3xl font-bold">Bestanden</h1>
         <p class="text-lg">Hier kunt u uw bestanden bekijken en downloaden.</p>
+        <table id="recentFilesTable" class="table-auto w-full">
+          <thead>
+            <tr class="bg-gray-200">
+              <th class="px-4 py-2">Bestandsnaam</th>
+              <th class="px-4 py-2">Bestandstype</th>
+              <th class="px-4 py-2">Grootte</th>
+              <th class="px-4 py-2">Aangemaakt op</th>
+            </tr>
+          </thead>
+          <tbody id="recentFilesBody">
+            <!-- Render recent files directly in EJS template -->
+            <% recentFiles.forEach(file=> { %>
+              <tr>
+                <td class="px-4 py-2">
+                  <%= file.name %>
+                </td>
+                <td class="px-4 py-2">
+                  <%= file.fileType %>
+                </td>
+                <td class="px-4 py-2">
+                  <%= file.size %>
+                </td>
+                <td class="px-4 py-2">
+                  <%= file.createdAt %>
+                </td>
+              </tr>
+              <% }); %>
+          </tbody>
+        </table>
       </div>
 
     </main>
-
-
-
-    <script>
-      function swapDiv(Div) {
-        var home = document.getElementById('home');
-        var files = document.getElementById('Files');
-
-        if (showDiv == 'home') {
-          home.style.display = 'block';
-          files.style.display = 'none';
-        } else if (showDiv == 'Files') {
-          home.style.display = 'none';
-          files.style.display = 'block';
-        }
-      }
-    </script>
 
 </body>
 

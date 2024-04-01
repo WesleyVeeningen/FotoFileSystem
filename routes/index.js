@@ -13,9 +13,21 @@ router.get('/', function (req, res, next) {
 
 // GET home page
 router.get('/home', async function (req, res, next) {
-  res.render('index', { title: 'Express', username: req.session.username });
-
+  try {
+    // Fetch recent files
+    const recentFiles = await File.find().sort({ createdAt: -1 }).limit(10);
+    console.log('Recent files:', recentFiles);
+    res.render('index', { title: "home", recentFiles, test: "test", username: req.session.username });
+  } catch (error) {
+    console.error('Error fetching recent files:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
+
+
+
+
+
 
 
 // Display file upload form
@@ -33,9 +45,6 @@ router.get('/files/:folderName', async (req, res) => {
   }
 });
 
-// Other routes...
-
-module.exports = router;
 
 
 // Display file upload form
@@ -61,6 +70,7 @@ if (!fs.existsSync(tempFolderPath)) {
 }
 
 // Initialize multer with the storage options for temporary upload
+// Initialize multer with the storage options for temporary upload
 const tempStorage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, 'public/temp'); // Store files in the 'temp' directory within the 'public' folder
@@ -69,17 +79,24 @@ const tempStorage = multer.diskStorage({
     cb(null, file.originalname); // Use the original filename
   }
 });
+
+// Multer storage for temporary upload
 const uploadTemp = multer({ storage: tempStorage });
 
-
+// POST route to handle file uploads (images, videos, and audios)
+// POST route to handle file uploads (images, videos, and audios)
+// POST route to handle file uploads (images, videos, and audios)
 router.post('/files', uploadTemp.single('foto'), async (req, res, next) => {
   try {
     if (!req.file) {
       return res.status(400).send('No file uploaded.');
     }
 
-    // Check if the uploaded file is an image or video
-    if (!req.file.mimetype.startsWith('image') && !req.file.mimetype.startsWith('video')) {
+    // Extract the file type from the uploaded file
+    const fileType = req.file.mimetype;
+
+    // Check if the uploaded file is an image, video, or audio
+    if (!fileType.startsWith('image') && !fileType.startsWith('video') && !fileType.startsWith('audio')) {
       return res.status(400).send('Unsupported file type.');
     }
 
@@ -92,7 +109,7 @@ router.post('/files', uploadTemp.single('foto'), async (req, res, next) => {
     // Get file information
     const fileInfo = {
       name: fileName,
-      type: req.file.mimetype,
+      type: fileType,
       size: req.file.size,
       createdAt: new Date(), // Default to the current date
       originDate: new Date(), // Default to the current date
@@ -126,10 +143,12 @@ router.post('/files', uploadTemp.single('foto'), async (req, res, next) => {
       }
 
       // Create a thumbnail
-      const thumbnailPath = path.join(thumbnailsDir, fileName);
-      await sharp(filePath)
-        .resize({ width: 200 }) // Adjust the width of the thumbnail as needed
-        .toFile(thumbnailPath);
+      if (fileType.startsWith('image')) {
+        const thumbnailPath = path.join(thumbnailsDir, fileName); // Fix here
+        await sharp(filePath) // Use filePath here instead of tempFileName
+          .resize({ width: 200 })
+          .toFile(thumbnailPath);
+      }
     });
 
     // Render EJS view with file information and folder options
@@ -142,11 +161,7 @@ router.post('/files', uploadTemp.single('foto'), async (req, res, next) => {
 });
 
 
-
-
-
 // POST route to move the file to the specified folder
-
 router.post('/moveFile', async (req, res) => {
   try {
     const { folder, fileName, fileType, fileSize, fileCreatedAt, originDate } = req.body; // Extract file information from the request body
@@ -181,9 +196,14 @@ router.post('/moveFile', async (req, res) => {
     const thumbnailPath = path.join(thumbnailDir, tempFileName);
 
     // Create a thumbnail of the moved file
-    await sharp(path.join(targetFolder, tempFileName))
-      .resize({ width: 200 }) // Adjust the width of the thumbnail as needed
-      .toFile(thumbnailPath);
+    // Create a thumbnail of the moved file
+    if (fileType.startsWith('image')) {
+      const thumbnailPath = path.join(thumbnailDir, tempFileName);
+      await sharp(path.join(targetFolder, tempFileName))
+        .resize({ width: 200 })
+        .toFile(thumbnailPath);
+    }
+
 
     // Convert fileSize to a number
     const size = parseInt(fileSize, 10);
@@ -207,6 +227,22 @@ router.post('/moveFile', async (req, res) => {
     res.status(500).send('Internal Server Error');
   }
 });
+
+// Assuming you have routes set up in your Express.js app
+// POST route to handle adding a new folder
+router.post('/folders', async (req, res) => {
+  try {
+    // Assuming you have a Folder model defined with Mongoose
+    const { name } = req.body;
+    const newFolder = new Folder({ name });
+    await newFolder.save();
+    res.json({ success: true, message: 'Folder added successfully' });
+  } catch (error) {
+    console.error('Error adding folder:', error);
+    res.status(500).json({ success: false, message: 'An error occurred while adding the folder' });
+  }
+});
+
 
 router.delete('/files/:id', async (req, res) => {
   try {
