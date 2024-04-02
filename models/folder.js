@@ -5,6 +5,10 @@ const folderSchema = new mongoose.Schema({
     name: {
         type: String,
         required: true
+    },
+    user: {
+        type: String,
+        ref: 'users'
     }
 });
 

@@ -29,7 +29,11 @@ const fileSchema = new mongoose.Schema({
     },
     folder: {
         type: String,
-        ref: 'Folder'
+        ref: 'folders'
+    },
+    user: {
+        type: String,
+        ref: 'users'
     }
 });
 

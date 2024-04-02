@@ -5,10 +5,11 @@ const Folder = require('../models/folder');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
+const session = require('express-session');
 const sharp = require('sharp'); // Import sharp for image processing
 
 router.get('/', function (req, res, next) {
-  res.redirect('/home');
+  res.redirect('/files');
 });
 
 // GET home page
@@ -17,7 +18,7 @@ router.get('/home', async function (req, res, next) {
     // Fetch recent files
     const recentFiles = await File.find().sort({ createdAt: -1 }).limit(10);
     console.log('Recent files:', recentFiles);
-    res.render('index', { title: "home", recentFiles, test: "test", username: req.session.username });
+    res.render('index', { title: "home", test: "test", username: req.session.username });
   } catch (error) {
     console.error('Error fetching recent files:', error);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -51,10 +52,17 @@ router.get('/files/:folderName', async (req, res) => {
 // Display file upload form
 router.get('/files', async (req, res, next) => {
 
+  if (!req.session.username) {
+    return res.redirect('/auth/login');
+  }
+
   try {
     // Fetch file information from MongoDB
-    const folders = await Folder.find();
-    const files = await File.find();
+    console.log(req.session.username);
+    const folders = await Folder.find({ user: req.session.username });
+    const files = await File.find({ user: req.session.username });
+    console.log('Folders:', folders);
+    console.log('Files:', files);
     res.render('files', { title: 'Upload File', username: req.session.username, folders, files });
   } catch (error) {
     console.error(error);
@@ -127,7 +135,7 @@ router.post('/files', uploadTemp.single('foto'), async (req, res, next) => {
     });
 
     // Fetch folders from MongoDB
-    const folders = await Folder.find();
+    const folders = await Folder.find({ user: req.session.username });
 
     // Create upload directories for each folder
     folders.forEach(async (folder) => {
@@ -216,9 +224,12 @@ router.post('/moveFile', async (req, res) => {
       createdAt: fileCreatedAt,
       originDate: originDate,
       folder: folder,
+      user: req.session.username,
       // Set other properties as needed, such as uploadDate, originDate, and user
     });
     await newFile.save();
+
+    console.log('File moved:', fileName);
 
     // Redirect to some page after moving the file
     res.redirect('/files');
@@ -234,7 +245,8 @@ router.post('/folders', async (req, res) => {
   try {
     // Assuming you have a Folder model defined with Mongoose
     const { name } = req.body;
-    const newFolder = new Folder({ name });
+    const user = req.session.username;
+    const newFolder = new Folder({ name, user });
     await newFolder.save();
     res.json({ success: true, message: 'Folder added successfully' });
   } catch (error) {
