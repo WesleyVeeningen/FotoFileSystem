@@ -35,9 +35,8 @@
             <% folders.forEach(folder=> { %>
                 <div class="rounded-lg flex items-center space-x-5 cursor-pointer folder-name" id="folder-button"
                     data-folder-id="<%= folder._id %>">
-                    <p><i class="fa-solid fa-folder"></i>
-                        <%= folder.name %>
-                    </p>
+                    <p><i class="fa-solid fa-folder"></i></p>
+                    <%= folder.name %>
                 </div>
                 <% }); %>
         </div>

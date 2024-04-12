@@ -60,6 +60,7 @@ router.get('/files', async (req, res, next) => {
     });
     const totalFileSizeMB = (totalFileSizeBytes / (1024 * 1024)).toFixed(2);
 
+
     // Render the template with both folders and files data
     res.render('files', { title: 'Upload File', username: req.session.username, folders, files, totalFileSizeMB });
   } catch (error) {
@@ -294,7 +295,12 @@ router.post('/folders', async (req, res) => {
     return res.status(400).json({ success: false, message: 'Failed to add folder' });
   }
   const folders = await Folder.find({ user: username });
-  res.json({ success: true, message: 'Folder added successfully', folders });
+
+  const fileFolderFind = await File.find({ folder: "home" });
+
+  const infolder = await Folder.find({ name: fileFolderFind });
+
+  res.json({ success: true, message: 'Folder added successfully', folders, infolder });
 });
 
 
