@@ -75,7 +75,7 @@ router.post('/register', async (req, res) => {
 
 
         // Save the token in the user's document
-        const user = new User({ username, email, hashedPassword, token });
+        const user = new User({ username, email, password, token });
         await user.save();
 
         // Send confirmation email
