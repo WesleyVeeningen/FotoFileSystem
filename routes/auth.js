@@ -71,7 +71,7 @@ router.post('/register', async (req, res) => {
         const token = crypto.randomUUID();
 
         // Hash the password
-        const hashedPassword = await bcrypt.hash(password, 10);
+        password = await bcrypt.hash(password, 10);
 
 
         // Save the token in the user's document
