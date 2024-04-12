@@ -70,9 +70,12 @@ router.post('/register', async (req, res) => {
         // Generate a unique token for email verification
         const token = crypto.randomUUID();
 
+        // Hash the password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
 
         // Save the token in the user's document
-        const user = new User({ username, email, password, token });
+        const user = new User({ username, email, hashedPassword, token });
         await user.save();
 
         // Send confirmation email
