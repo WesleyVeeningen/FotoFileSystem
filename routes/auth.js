@@ -3,6 +3,7 @@ var router = express.Router();
 const User = require('../models/user');
 const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
+const crypto = require('crypto');
 
 /* GET home page. */
 router.get('/', function (req, res, next) {
