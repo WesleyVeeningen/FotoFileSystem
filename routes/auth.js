@@ -74,7 +74,7 @@ router.post('/register', async (req, res) => {
             service: 'gmail',
             auth: {
                 user: 'fotofilesysteem@gmail.com',
-                pass: 'fzxe lqke nygk fvii'
+                pass: 'fzxelqkenygkfvii'
             }
         });
 
