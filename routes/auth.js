@@ -62,6 +62,13 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({ message: 'Passwords do not match' });
         }
 
+        // Generate a unique token for email verification
+        const token = generateToken();
+
+        // Save the token in the user's document
+        const user = new User({ username, email, password, token });
+        await user.save();
+
         // Send confirmation email
         const transporter = nodemailer.createTransport({
             service: 'gmail',
@@ -76,11 +83,12 @@ router.post('/register', async (req, res) => {
             from: 'fotofilesysteem@gmail.com',
             to: email,
             subject: 'Registration Confirmation',
-            text: 'Thank you for registering with us!'
+            html: `<p>Thank you for registering with us!</p>
+                    <p>Please click <a href="http://yourwebsite.com/verify/${token}">here</a> to verify your email.</p>`
         };
 
         // Send the email
-        transporter.sendMail(mailOptions, async (error, info) => {
+        transporter.sendMail(mailOptions, (error, info) => {
             if (error) {
                 console.error('Error sending email:', error);
                 return res.status(500).json({ message: 'Error sending email' + error });
@@ -88,25 +96,33 @@ router.post('/register', async (req, res) => {
 
             console.log('Email sent:', info.response);
 
-            try {
-                // Hash the password
-                const hashedPassword = await bcrypt.hash(password, 10);
-
-                // Create new user with hashed password
-                const newUser = new User({ username, email, password: hashedPassword });
-                await newUser.save();
-
-                req.session.isLoggedIn = true;
-                req.session.username = username;
-                req.session.email = email;
-
-                res.redirect('/auth/login');
-
-            } catch (error) {
-                console.error('Error creating user:', error);
-                res.status(500).json({ message: 'Error creating user' });
-            }
+            res.redirect('/auth/login');
         });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+router.post('/verify/:token', async (req, res) => {
+    const { token } = req.params;
+
+    try {
+        // Find the user by token
+        const user = await User.findOne({ token });
+
+        // If user not found, return an error
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Update the user's document to mark email as verified
+        user.isEmailVerified = true;
+        user.token = null;
+        await user.save();
+
+        res.status(200).json({ message: 'Email verified successfully' });
 
     } catch (error) {
         console.error(error);
