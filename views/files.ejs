@@ -35,8 +35,9 @@
             <% folders.forEach(folder=> { %>
                 <div class="rounded-lg flex items-center space-x-5 cursor-pointer folder-name" id="folder-button"
                     data-folder-id="<%= folder._id %>">
-                    <i class="fa-solid fa-folder"></i>
-                    <%= folder.name %>
+                    <p><i class="fa-solid fa-folder"></i>
+                        <%= folder.name %>
+                    </p>
                 </div>
                 <% }); %>
         </div>
@@ -305,7 +306,7 @@
                             const folderDiv = document.createElement('div');
                             folderDiv.classList.add('rounded-lg', 'flex', 'items-center', 'cursor-pointer', 'folder-name'); // Add ml-5 class here
                             folderDiv.setAttribute('data-folder-id', folder._id);
-                            folderDiv.innerHTML = `< p > <i class="fa-solid mr-4 fa-folder"></i>${folder.name}</ >`;
+                            folderDiv.innerHTML = `<p><i class="fa-solid mr-4 fa-folder"></i>${folder.name}</p>`;
                             foldersContainer.appendChild(folderDiv);
                         });
                         attachFolderClickEventListeners(); // Reattach folder click event listeners
