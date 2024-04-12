@@ -3,6 +3,7 @@ var router = express.Router();
 const User = require('../models/user');
 const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
+const uuidv4 = require("uuid/v4")
 
 /* GET home page. */
 router.get('/', function (req, res, next) {
@@ -63,7 +64,7 @@ router.post('/register', async (req, res) => {
         }
 
         // Generate a unique token for email verification
-        const token = generateToken();
+        const token = uuidv4();
 
         // Save the token in the user's document
         const user = new User({ username, email, password, token });
