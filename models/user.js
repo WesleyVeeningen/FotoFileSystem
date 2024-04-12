@@ -16,9 +16,9 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-        token: {
+    token: {
         type: String,
-        required: true
+        required: false
     },
 });
 
