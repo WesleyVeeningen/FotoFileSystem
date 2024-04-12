@@ -105,7 +105,7 @@ router.post('/register', async (req, res) => {
     }
 });
 
-router.post('/verify/:token', async (req, res) => {
+router.get('/verify/:token', async (req, res) => {
     const { token } = req.params;
 
     try {
