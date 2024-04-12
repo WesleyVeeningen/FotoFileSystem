@@ -86,7 +86,7 @@ router.post('/register', async (req, res) => {
             to: email,
             subject: 'Registration Confirmation',
             html: `<p>Thank you for registering with us!</p>
-                    <p>Please click <a href="http://yourwebsite.com/verify/${token}">here</a> to verify your email.</p>`
+                    <p>Please click <a href="https://grumpy-shawl-seal.cyclic.app/verify/${token}">here</a> to verify your email.</p>`
         };
 
         // Send the email
