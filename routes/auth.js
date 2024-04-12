@@ -28,6 +28,10 @@ router.post('/login', async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
+        if (!user.isVerified) {
+            return res.status(401).json({ message: 'Email not verified' });
+        }
+
         // Compare the provided password with the hashed password stored in the database
         const isPasswordMatch = await bcrypt.compare(password, user.password);
 
@@ -120,11 +124,11 @@ router.get('/verify/:token', async (req, res) => {
         }
 
         // Update the user's document to mark email as verified
-        user.isEmailVerified = true;
+        user.isVerified = true;
         user.token = null;
         await user.save();
 
-        res.status(200).json({ message: 'Email verified successfully' });
+        res.redirect('/auth/login');
 
     } catch (error) {
         console.error(error);

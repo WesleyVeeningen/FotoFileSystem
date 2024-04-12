@@ -20,6 +20,11 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: false
     },
+    isVerified: {
+        type: Boolean,
+        required: true,
+        default: false
+    }
 });
 
 // Create User model
