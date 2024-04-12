@@ -4,66 +4,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>File Information and Folder Selection</title>
+    <title>Uploaded Files</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
 
-<body class="bg-gray-100 h-screen flex flex-col justify-center items-center">
-    <div class="max-w-md bg-white p-8 rounded-lg shadow-md">
-        <h1 class="text-2xl font-bold mb-4">File Information</h1>
-        <form action="/moveFile" method="POST" id="fileInfoForm">
-            <div class="mb-4">
-                <label for="fileName" class="block text-gray-700">File Name:</label>
-                <input type="text" id="fileName" name="fileName" value="<%= fileInfo.name %>" readonly
-                    class="w-full border-gray-300 rounded-lg py-2 px-4">
-            </div>
-            <div class="mb-4">
-                <label for="fileType" class="block text-gray-700">File Type:</label>
-                <input type="text" id="fileType" name="fileType" value="<%= fileInfo.type %>" readonly
-                    class="w-full border-gray-300 rounded-lg py-2 px-4">
-            </div>
-            <div class="mb-4">
-                <label for="fileSize" class="block text-gray-700">File Size:</label>
-                <input type="text" id="fileSize" name="fileSize" value="<%= fileInfo.size %> bytes" readonly
-                    class="w-full border-gray-300 rounded-lg py-2 px-4">
-            </div>
-            <div class="mb-4">
-                <label for="uploadedAt" class="block text-gray-700">Uploaded at:</label>
-                <input type="datetime-local" id="uploadedAt" name="uploadedAt"
-                    class="w-full border-gray-300 rounded-lg py-2 px-4">
-            </div>
-            <div class="mb-4">
-                <label for="originDate" class="block text-gray-700">Origin Date:</label>
-                <input type="datetime-local" id="originDate" name="originDate" value="<%= fileInfo.originDate %>"
-                    class="w-full border-gray-300 rounded-lg py-2 px-4">
-            </div>
-            <div class="mb-4">
-                <label for="folder" class="block text-gray-700">Select Folder:</label>
-                <select id="folder" name="folder" class="w-full border-gray-300 rounded-lg py-2 px-4">
-                    <% folders.forEach(folder=> { %>
-                        <option value="<%= folder.name %>">
-                            <%= folder.name %>
-                        </option>
-                        <% }); %>
-                </select>
-            </div>
-            <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg">Move
-                File</button>
-        </form>
-    </div>
-
-    <script>
-        // Get the current date and format it as YYYY-MM-DDTHH:MM
-        const currentDate = new Date();
-        const formattedDate = currentDate.toISOString().slice(0, 16); // Format the date as YYYY-MM-DDTHH:MM
-
-        // Set the value of the uploadedAt input to the formatted date
-        document.getElementById('uploadedAt').value = formattedDate;
-
-        // Set the value of the originDate input to the date from fileInfo.originDate
-        const originDateValue = '<%= fileInfo.originDate %>';
-        document.getElementById('originDate').value = originDateValue;
-    </script>
+<body class="bg-gray-100 py-8 px-4">
+    <h1 class="text-3xl font-bold mb-8 text-center">Uploaded Files</h1>
+    <form action="/moveFile" method="POST" class="max-w mx-auto">
+        <div class="flex flex-wrap -mx-4">
+            <% fileInfo.forEach(file=> { %>
+                <div class="w-full sm:w-1/4 md:w-1/5 lg:w-1/6 px-4 mb-8">
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <img src="/temp/<%= file.name %>" alt="File Thumbnail" class="mb-4 w-1/2 h-auto">
+                        <p class="text-gray-800 font-semibold mb-2">File Name: <%= file.name %>
+                        </p>
+                        <p class="text-gray-800 mb-2">File Size: <%= (file.size / 1024 / 1024).toFixed(2) %> MB</p>
+                        <textarea name="bio[]" id="bio" cols="30" rows="3" placeholder="Bio"
+                            class="w-full p-2 mb-2 border rounded-lg"></textarea>
+                        <select name="folderName[]" class="w-full p-2 mb-2 border rounded-lg">
+                            <% folders.forEach(folder=> { %>
+                                <option value="<%= folder.name %>">
+                                    <%= folder.name %>
+                                </option>
+                                <% }); %>
+                        </select>
+                        <!-- Hidden inputs -->
+                        <input type="hidden" name="fileName[]" value="<%= file.name %>">
+                        <input type="hidden" name="fileSize[]" value="<%= file.size %>">
+                        <input type="hidden" name="fileType[]" value="<%= file.type %>">
+                        <input type="hidden" name="filecreatedAt[]" value="<%= file.createdAt %>">
+                        <input type="hidden" name="fileoriginDate[]" value="<%= file.originDate %>">
+                    </div>
+                </div>
+                <% }); %>
+        </div>
+        <div class="flex justify-center">
+            <!-- Adjust the action attribute to your backend route -->
+            <button type="submit"
+                class="bg-green-500 text-white px-6 py-3 rounded-lg mt-8 hover:bg-green-600 transition-colors duration-300">Submit</button>
+        </div>
+    </form>
 </body>
 
 </html>

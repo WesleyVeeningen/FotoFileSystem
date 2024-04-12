@@ -2,10 +2,13 @@ const express = require('express');
 const router = express.Router();
 const File = require('../models/file');
 const Folder = require('../models/folder');
+const Persoon = require('../models/personen');
+const session = require('express-session');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp'); // Import sharp for image processing
+const { isArray } = require('util');
 
 router.get('/', function (req, res, next) {
   res.redirect('/home');
@@ -13,15 +16,7 @@ router.get('/', function (req, res, next) {
 
 // GET home page
 router.get('/home', async function (req, res, next) {
-  try {
-    // Fetch recent files
-    const recentFiles = await File.find().sort({ createdAt: -1 }).limit(10);
-    console.log('Recent files:', recentFiles);
-    res.render('index', { title: "home", recentFiles, test: "test", username: req.session.username });
-  } catch (error) {
-    console.error('Error fetching recent files:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
+  res.redirect('/files');
 });
 
 
@@ -50,17 +45,53 @@ router.get('/files/:folderName', async (req, res) => {
 // Display file upload form
 // Display file upload form
 router.get('/files', async (req, res, next) => {
-
+  if (!req.session.username) {
+    return res.redirect('/auth/login');
+  }
   try {
     // Fetch file information from MongoDB
-    const folders = await Folder.find();
-    const files = await File.find();
-    res.render('files', { title: 'Upload File', username: req.session.username, folders, files });
+    const folders = await Folder.find({});
+    let files = await File.find({ folder: "home" }); // Fetch files for the logged-in user only
+
+    // Calculate total file size before deletion
+    let totalFileSizeBytes = 0;
+    files.forEach(file => {
+      totalFileSizeBytes += file.size;
+    });
+    const totalFileSizeMB = (totalFileSizeBytes / (1024 * 1024)).toFixed(2);
+
+    // Render the template with both folders and files data
+    res.render('files', { title: 'Upload File', username: req.session.username, folders, files, totalFileSizeMB });
   } catch (error) {
     console.error(error);
     res.status(500).send('Internal Server Error');
   }
 });
+
+// Define a route to calculate the total file size
+router.get('/files/totalFileSize', async (req, res) => {
+  try {
+    // Fetch files for the logged-in user only
+    const files = await File.find({});
+
+    // Calculate total file size in bytes
+    let totalFileSizeBytes = 0;
+    files.forEach(file => {
+      totalFileSizeBytes += file.size;
+    });
+
+    // Convert total file size to megabytes
+    const totalFileSizeMB = totalFileSizeBytes / (1024 * 1024);
+
+    // Send the total file size as a response
+    res.json({ success: true, totalFileSizeMB });
+  } catch (error) {
+    console.error('Error calculating total file size:', error);
+    res.status(500).json({ success: false, message: 'An error occurred while calculating the total file size' });
+  }
+});
+
+
 
 
 // Ensure the existence of the temporary folder
@@ -80,168 +111,192 @@ const tempStorage = multer.diskStorage({
   }
 });
 
+
 // Multer storage for temporary upload
 const uploadTemp = multer({ storage: tempStorage });
 
 // POST route to handle file uploads (images, videos, and audios)
 // POST route to handle file uploads (images, videos, and audios)
 // POST route to handle file uploads (images, videos, and audios)
-router.post('/files', uploadTemp.single('foto'), async (req, res, next) => {
+router.post('/files', uploadTemp.array('files[]'), async (req, res, next) => {
+
   try {
-    if (!req.file) {
-      return res.status(400).send('No file uploaded.');
-    }
+    console.log('Files uploaded:', req.files);
 
-    // Extract the file type from the uploaded file
-    const fileType = req.file.mimetype;
+    // Initialize an array to store fileInfo objects
+    const fileInfoArray = [];
 
-    // Check if the uploaded file is an image, video, or audio
-    if (!fileType.startsWith('image') && !fileType.startsWith('video') && !fileType.startsWith('audio')) {
-      return res.status(400).send('Unsupported file type.');
-    }
+    // Loop through each uploaded file
+    for (let i = 0; i < req.files.length; i++) {
+      const file = req.files[i];
+      const fileType = file.mimetype;
 
-    // Get the filename and path of the uploaded file
-    const fileName = req.file.originalname;
-    const filePath = req.file.path;
-
-    console.log('File uploaded:', fileName);
-
-    // Get file information
-    const fileInfo = {
-      name: fileName,
-      type: fileType,
-      size: req.file.size,
-      createdAt: new Date(), // Default to the current date
-      originDate: new Date(), // Default to the current date
-    };
-
-    // Get the creation date of the uploaded file
-    fs.stat(filePath, (err, stats) => {
-      if (err) {
-        console.error('Error getting file stats:', err);
-      } else {
-        // Use the birthtime (creation time) of the file as the origin date
-        fileInfo.originDate = stats.birthtime;
-        console.log('File creation date:', fileInfo.originDate);
+      // Check if the uploaded file is an image, video, or audio
+      if (!fileType.startsWith('image') && !fileType.startsWith('video') && !fileType.startsWith('audio')) {
+        return res.status(400).send('Unsupported file type.');
       }
-    });
+
+      // Get the filename and path of the uploaded file
+      const fileName = file.originalname;
+      const filePath = file.path;
+
+      console.log('File uploaded:', fileName);
+
+      // Get file information
+      const fileInfo = {
+        name: fileName,
+        type: fileType,
+        size: file.size,
+        createdAt: new Date(), // Default to the current date
+        originDate: new Date(), // Default to the current date
+      };
+
+      // Get the creation date of the uploaded file
+      fs.stat(filePath, (err, stats) => {
+        if (err) {
+          console.error('Error getting file stats:', err);
+        } else {
+          // Use the birthtime (creation time) of the file as the origin date
+          fileInfo.originDate = stats.birthtime;
+          console.log('File creation date:', fileInfo.originDate);
+        }
+      });
+
+      // Push the fileInfo object to the array
+      fileInfoArray.push(fileInfo);
+    }
 
     // Fetch folders from MongoDB
-    const folders = await Folder.find();
+    const folders = await Folder.find({});
+    const personen = await Persoon.find();
 
-    // Create upload directories for each folder
-    folders.forEach(async (folder) => {
-      const uploadDir = path.join(__dirname, `../public/uploads/${folder.name}`);
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-
-      // Create thumbnails directory within the upload directory if it doesn't exist
-      const thumbnailsDir = path.join(uploadDir, 'thumbnails');
-      if (!fs.existsSync(thumbnailsDir)) {
-        fs.mkdirSync(thumbnailsDir);
-      }
-
-      // Create a thumbnail
-      if (fileType.startsWith('image')) {
-        const thumbnailPath = path.join(thumbnailsDir, fileName); // Fix here
-        await sharp(filePath) // Use filePath here instead of tempFileName
-          .resize({ width: 200 })
-          .toFile(thumbnailPath);
-      }
-    });
-
+    console.log('File Info Array:', fileInfoArray);
     // Render EJS view with file information and folder options
-    res.render('./components/FileForm', { fileInfo, folders });
+    res.render('./components/FileForm', { fileInfo: fileInfoArray, user: req.session.username, folders, personen });
 
   } catch (error) {
     console.error(error);
     res.status(500).send('Internal Server Error');
   }
 });
+
+router.get('/moveFile', async (req, res) => {
+  if (!req.session.username) {
+    return res.redirect('/auth/login');
+  }
+});
+
+router.post('/moveFile', async (req, res) => {
+  // Destructure arrays from req.body
+  const { fileName, fileSize, fileType, filecreatedAt, fileoriginDate, folderName, bio } = req.body;
+
+  try {
+    // Iterate through each file provided in the request
+    for (let i = 0; i < fileName.length; i++) {
+      // Check if folderName is provided for the file
+      if (!folderName[0]) {
+        throw new Error('Folder name is missing for file: ' + fileName[i]);
+      }
+
+      console.log('Moving file:', bio[i]);
+
+      const file = {
+        fileName: fileName[i],
+        fileSize: fileSize[i],
+        fileType: fileType[i],
+        filecreatedAt: filecreatedAt[i],
+        fileoriginDate: fileoriginDate[i],
+        folderName: folderName[i],
+        bio: bio[i],
+      };
+
+      // Create new file object using mongoose model
+      const newFile = new File({
+        name: file.fileName,
+        size: file.fileSize,
+        fileType: file.fileType,
+        createdAt: file.filecreatedAt,
+        originDate: file.fileoriginDate,
+        folder: file.folderName,
+        user: req.session.username,
+        bio: file.bio,
+      });
+      // Save the file object to the database
+      await newFile.save();
+
+      // Construct file paths
+      const tempFilePath = path.join(__dirname, '../public/temp', file.fileName);
+      const destinationFolderPath = path.join(__dirname, '../public/uploads', file.folderName);
+      const destinationFilePath = path.join(destinationFolderPath, file.fileName);
+
+      // Create destination folder if it doesn't exist
+      if (!fs.existsSync(destinationFolderPath)) {
+        fs.mkdirSync(destinationFolderPath, { recursive: true });
+      }
+
+      // Move the original file to the destination folder
+      fs.renameSync(tempFilePath, destinationFilePath);
+
+      // Create thumbnail folder within the destination folder if it doesn't exist
+      const thumbnailFolderPath = path.join(destinationFolderPath, 'thumbnail');
+      if (!fs.existsSync(thumbnailFolderPath)) {
+        fs.mkdirSync(thumbnailFolderPath, { recursive: true });
+      }
+
+      // Create thumbnail file path
+      const thumbnailFileName = 'thumbnail_' + file.fileName; // Prefix with 'thumbnail_'
+      const thumbnailFilePath = path.join(thumbnailFolderPath, thumbnailFileName);
+
+      // Generate thumbnail using Sharp
+      await sharp(destinationFilePath)
+        .resize(100) // Specify the width of the thumbnail
+        .toFile(thumbnailFilePath);
+
+      // Log success message
+      console.log('File moved and saved successfully:', file.fileName);
+    }
+
+    // Redirect to the files page or send a success response
+    res.redirect('/files');
+  } catch (error) {
+    // Handle errors
+    console.error('Error moving files:', error.message);
+    res.status(400).send('Error moving files: ' + error.message);
+  }
+});
+
+
+
+
 
 
 // POST route to move the file to the specified folder
-router.post('/moveFile', async (req, res) => {
-  try {
-    const { folder, fileName, fileType, fileSize, fileCreatedAt, originDate } = req.body; // Extract file information from the request body
-    console.log('Folder:', folder);
-    const tempFileName = fileName; // Assuming the file extension is .png
-    const tempFilePath = path.join(__dirname, '../public/temp', tempFileName);
 
-    // Check if the folder name is defined
-    if (!folder) {
-      console.log('Folder name is undefined');
-      return res.status(400).send('Folder name is undefined.');
-    }
-
-    const targetFolder = path.join(__dirname, `../public/uploads/${folder}`);
-
-    // Check if the file exists in the temporary folder
-    if (!fs.existsSync(tempFilePath)) {
-      console.log(tempFilePath + ' not found');
-      return res.status(400).send('File not found in temporary folder.');
-    }
-
-    // Move the file from the temporary folder to the specified folder
-    fs.renameSync(tempFilePath, path.join(targetFolder, tempFileName));
-
-    // Create a thumbnail directory within the target folder if it doesn't exist
-    const thumbnailDir = path.join(targetFolder, 'thumbnails');
-    if (!fs.existsSync(thumbnailDir)) {
-      fs.mkdirSync(thumbnailDir);
-    }
-
-    // Create a thumbnail path within the thumbnail directory
-    const thumbnailPath = path.join(thumbnailDir, tempFileName);
-
-    // Create a thumbnail of the moved file
-    // Create a thumbnail of the moved file
-    if (fileType.startsWith('image')) {
-      const thumbnailPath = path.join(thumbnailDir, tempFileName);
-      await sharp(path.join(targetFolder, tempFileName))
-        .resize({ width: 200 })
-        .toFile(thumbnailPath);
-    }
-
-
-    // Convert fileSize to a number
-    const size = parseInt(fileSize, 10);
-
-    // Create a new File document and save it to the database
-    const newFile = new File({
-      name: fileName,
-      fileType: fileType,
-      size: size,
-      createdAt: fileCreatedAt,
-      originDate: originDate,
-      folder: folder,
-      // Set other properties as needed, such as uploadDate, originDate, and user
-    });
-    await newFile.save();
-
-    // Redirect to some page after moving the file
-    res.redirect('/files');
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Internal Server Error');
-  }
-});
 
 // Assuming you have routes set up in your Express.js app
 // POST route to handle adding a new folder
 router.post('/folders', async (req, res) => {
-  try {
-    // Assuming you have a Folder model defined with Mongoose
-    const { name } = req.body;
-    const newFolder = new Folder({ name });
-    await newFolder.save();
-    res.json({ success: true, message: 'Folder added successfully' });
-  } catch (error) {
-    console.error('Error adding folder:', error);
-    res.status(500).json({ success: false, message: 'An error occurred while adding the folder' });
+  const { name, username } = req.body;
+  if (!name || !username) {
+    return res.status(400).json({ success: false, message: 'Invalid folder name or username' });
   }
+
+  // Check if folder name contains special characters
+  const folderNameRegex = /^[a-zA-Z0-9-_]+$/; // Only allow alphanumeric characters, hyphen, and underscore
+  if (!folderNameRegex.test(name)) {
+    return res.status(400).json({ success: false, message: 'Invalid folder name. Only alphanumeric characters, hyphen, and underscore are allowed.' });
+  }
+
+  const newFolder = new Folder({ name, user: username });
+  await newFolder.save();
+  console.log('Folder added:', newFolder);
+  if (!newFolder) {
+    return res.status(400).json({ success: false, message: 'Failed to add folder' });
+  }
+  const folders = await Folder.find({ user: username });
+  res.json({ success: true, message: 'Folder added successfully', folders });
 });
+
 
 
 router.delete('/files/:id', async (req, res) => {
@@ -262,7 +317,7 @@ router.delete('/files/:id', async (req, res) => {
     }
 
     // Delete the thumbnail from the thumbnails folder
-    const thumbnailPath = path.join(__dirname, `../public/uploads/${deletedFile.folder}/thumbnails/${deletedFile.name}`);
+    const thumbnailPath = path.join(__dirname, `../public/uploads/${deletedFile.folder}/thumbnail/thumbnail_${deletedFile.name}`);
     if (fs.existsSync(thumbnailPath)) {
       fs.unlinkSync(thumbnailPath);
     }
@@ -270,14 +325,20 @@ router.delete('/files/:id', async (req, res) => {
     // Delete the file from the database
     await File.findByIdAndDelete(fileId);
 
-    res.json({ success: true, message: 'File deleted successfully.' });
+    // Recalculate total file size after deletion
+    let totalFileSizeBytes = 0;
+    const files = await File.find({ user: req.session.username });
+    files.forEach(file => {
+      totalFileSizeBytes += file.size;
+    });
+    const totalFileSizeMB = (totalFileSizeBytes / (1024 * 1024)).toFixed(2);
+
+    res.json({ success: true, message: 'File deleted successfully.', totalFileSizeMB });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: 'Internal Server Error' });
   }
 });
-
-
 
 
 

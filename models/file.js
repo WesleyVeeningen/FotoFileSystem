@@ -30,7 +30,18 @@ const fileSchema = new mongoose.Schema({
     folder: {
         type: String,
         ref: 'Folder'
-    }
+    },
+    personen: {
+        type: Array,
+        ref: 'Personen'
+    },
+    user: {
+        type: String,
+        ref: 'users'
+    },
+    bio: {
+        type: String,
+    },
 });
 
 // Create the file model
