@@ -31,15 +31,27 @@
                 File</button>
             <!-- New button -->
         </div>
-        <div class="overflow-x-auto folders-container ml-4 flex flex-wrap gap-5">
+        <div class="overflow-x-auto rela folders-container ml-4 flex flex-wrap gap-5">
             <% folders.forEach(folder=> { %>
-                <div class="rounded-lg flex items-center space-x-5 cursor-pointer folder-name" id="folder-button"
-                    data-folder-id="<%= folder._id %>">
-                    <p><i class="fa-solid fa-folder"></i></p>
-                    <%= folder.name %>
+                <div class="flex items-center space-x-5 cursor-pointer folder-name relative"
+                    id="folder-button-<%= folder._id %>" data-folder-id="<%= folder._id %>">
+                    <% if (folderFileCountMap.get(folder._id.toString())> 0) { %>
+                        <img src="/media/icons8-opened-folder.svg" alt="">
+                        <% } else { %>
+                            <img src="/media/icons8-folder.svg" alt="">
+                            <% } %>
+                                <div>
+                                    <p class="font-medium folder-text">
+                                        <%= folder.name %>
+                                    </p>
+                                    <p class="text-sm text-gray-500">
+                                        <%= folderFileCountMap.get(folder._id.toString()) %> files
+                                    </p>
+                                </div>
                 </div>
                 <% }); %>
         </div>
+
 
         <table class="hidden w-full mt-8">
             <thead>
@@ -70,7 +82,7 @@
         <h2 class="text-2xl font-bold mb-4">Upload File</h2>
         <form action="/files" method="POST" enctype="multipart/form-data">
 
-            <div class="flex items-center justify-center w-full">
+            <div class="flex items-center justify-center w-full mb-4">
                 <label for="dropzone-file"
                     class="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600">
                     <div class="flex flex-col items-center justify-center pt-5 pb-6">
@@ -79,8 +91,7 @@
                             <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2" />
                         </svg>
-                        <p class="mb-2 text-sm text-gray-500 dark:text-gray-400"><span class="font-semibold">Click to
-                                upload</span></p>
+                        <p class="mb-2 text-sm text-gray-500 dark:text-gray-400 font-semibold">Click to upload</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400">SVG, PNG, JPG, MP4 or MP3 (MAX. 800x400px)
                         </p>
                     </div>
@@ -88,10 +99,11 @@
                         class="hidden" />
                 </label>
             </div>
-            <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg">Upload</button>
+            <button type="submit"
+                class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg mb-4">Upload</button>
+            <button type="button" id="close-upload-popup"
+                class="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg">Close</button>
         </form>
-        <button id="close-upload-popup"
-            class="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg mt-4">Close</button>
     </div>
     <div id="image-popup"
         class="fixed top-0 left-0 w-full h-full hidden bg-black bg-opacity-70 flex items-center justify-center popup">
@@ -129,7 +141,7 @@
                     document.getElementById('popup-file-name').textContent = "File naam: " + fileName;
                     document.getElementById('popup-file-user').textContent = "Upload door: " + user; // Set persons
                     document.getElementById('popup-file-created-at').textContent = "Size: " + createdAt;
-                    document.getElementById('popup-file-bio').textContent = "Bio: " + bio;
+                    document.getElementById('popup-file-bio').textContent = "Info: " + bio;
                     document.getElementById('image-popup').classList.toggle('hidden');
                 }
             });
@@ -171,26 +183,23 @@
             }
         });
 
-        document.addEventListener('DOMContentLoaded', function () {
-            const firstFolder = document.querySelector('.folder-name');
-            if (firstFolder) {
-                firstFolder.click(); // Trigger click event on the first folder
-            }
-        });
+
 
         function attachFolderClickEventListeners() {
             const folderNames = document.querySelectorAll('.folder-name');
-
-            folderNames.forEach(folder => {
-                folder.addEventListener('click', async function () {
-                    const folderName = folder.textContent.trim(); // Extract the folder name from the clicked element
-                    const response = await fetch(`/files/${folderName}`); // Fetch files based on folder name
+            folderNames.forEach(folderNameElement => {
+                folderNameElement.addEventListener('click', async function () {
+                    const folderTextElement = folderNameElement.querySelector('.folder-text');
+                    const folderText = folderTextElement.textContent.trim(); // Extract the folder name from the nested .folder-text element
+                    const response = await fetch(`/files/${folderText}`); // Fetch files based on folder name
                     const files = await response.json();
                     displayFiles(files);
                     document.getElementById('folder').textContent = 'Folder ' + folderName; // Update folder title
                 });
             });
         }
+
+
 
         document.addEventListener('DOMContentLoaded', attachFolderClickEventListeners);
 
@@ -200,6 +209,13 @@
 
             filesTableBody.innerHTML = '';
 
+            // Check if the files array is empty
+            if (files.length === 0) {
+                console.log('No files found');
+                return;
+            }
+
+            // Update the folder title based on the first file's folder
             document.getElementById('folderTitle').textContent = 'Files in ' + files[0].folder;
 
             files.forEach(file => {
@@ -220,42 +236,35 @@
                 // If it's video, use the video icon
                 else if (isVideo) {
                     thumbnailSource = `<video width="160" height="90" controls>
-                            <source src="/uploads/${file.folder}/${file.name}" type="${file.fileType}" />
-                            Your browser does not support the video tag.
-                        </video>`;
+                <source src="/uploads/${file.folder}/${file.name}" type="${file.fileType}" />
+                Your browser does not support the video tag.
+            </video>`;
                 }
 
                 currentUser = '<%= username %>';
 
                 row.innerHTML = `
-    <td class="px-4 py-2">${thumbnailSource}</td>
-    <td class="px-4 py-2">${file.name}</td>
-    <td class="px-4 hidden py-2">${file.fileType}</td>
-    <td class="px-4 hidden py-2">${(file.size / (1024 * 1024)).toFixed(2)} MB</td>
-    <td class="px-4 hidden py-2">${file.createdAt}</td>
-    <td class="px-4 hidden py-2">${file.originDate ? file.originDate : '-'}</td>
-    <td class="px-4 hidden py-2">${file.user}</td> <!-- Display persons -->
-    <td class="px-4 py-2">
-        <a href="/uploads/${file.folder}/${file.name}" download class="text-blue-500 hover:text-blue-600 mr-2"><i class="fas fa-download"></i></a>
-        ${currentUser === file.user ? // Check if the current user is the file owner
-                        `
-            <button data-file-id="${file._id}" class="delete-file text-red-500 hover:text-red-600"><i class="fas fa-trash"></i></button>
-            `
+            <td class="px-4 py-2">${thumbnailSource}</td>
+            <td class="px-4 py-2">${file.name}</td>
+            <td class="px-4 hidden py-2">${file.fileType}</td>
+            <td class="px-4 hidden py-2">${(file.size / (1024 * 1024)).toFixed(2)} MB</td>
+            <td class="px-4 hidden py-2">${file.createdAt}</td>
+            <td class="px-4 hidden py-2">${file.originDate ? file.originDate : '-'}</td>
+            <td class="px-4 hidden py-2">${file.user}</td> <!-- Display persons -->
+            <td class="px-4 py-2">
+                <a href="/uploads/${file.folder}/${file.name}" download class="text-blue-500 hover:text-blue-600 mr-2"><i class="fas fa-download"></i></a>
+                ${currentUser === file.user ? // Check if the current user is the file owner
+                        `<button data-file-id="${file._id}" class="delete-file text-red-500 hover:text-red-600"><i class="fas fa-trash"></i></button>`
                         : ''}
-    </td>   
-    <td class="px-4 hidden py-2">${file.bio}</td>
-`;
-
-
+            </td>   
+            <td class="px-4 hidden py-2">${file.bio}</td>
+        `;
 
                 filesTableBody.appendChild(row);
             });
 
             // Show the files container
-            const filesContainer = document.getElementById('files-table');
-            if (filesContainer) {
-                filesContainer.classList.remove('hidden');
-            }
+            filesTableBody.classList.remove('hidden');
 
             // Add event listeners to delete buttons
             const deleteButtons = document.querySelectorAll('.delete-file');
@@ -263,7 +272,7 @@
                 button.addEventListener('click', async function () {
                     const fileId = button.dataset.fileId;
                     const fileName = button.closest('tr').querySelector('td:nth-child(2)').textContent;
-                    if (confirm(`Are you sure you want to delete this file ? ${fileName} `)) {
+                    if (confirm(`Are you sure you want to delete this file? ${fileName}`)) {
                         const response = await fetch(`/files/${fileId}`, { method: 'DELETE' });
                         const data = await response.json();
                         if (data.success) {
@@ -294,18 +303,23 @@
                     },
                     body: JSON.stringify({ name: folderName, username: username })
                 });
-
                 const data = await response.json();
                 if (data.success) {
                     // Folder added successfully, update the UI with the new folder list
                     const foldersContainer = document.querySelector('.folders-container');
                     if (foldersContainer) {
-                        foldersContainer.innerHTML = ''; // Clear existing folders
+                        // Clear existing folders
+                        foldersContainer.innerHTML = '';
                         data.folders.forEach(folder => {
                             const folderDiv = document.createElement('div');
                             folderDiv.classList.add('rounded-lg', 'flex', 'items-center', 'cursor-pointer', 'folder-name'); // Add ml-5 class here
                             folderDiv.setAttribute('data-folder-id', folder._id);
-                            folderDiv.innerHTML = `<p><i class="fa-solid mr-4 fa-folder"></i>${folder.name}</p>`;
+                            const folderIcon = document.createElement('p');
+                            folderIcon.innerHTML = `<img src="/media/${folder.hasFiles ? 'icons8-opened-folder.svg' : 'icons8-folder.svg'}">`; // Use conditional operator to determine folder icon
+                            folderDiv.appendChild(folderIcon);
+                            const folderNameElement = document.createElement('p');
+                            folderNameElement.textContent = folder.name;
+                            folderDiv.appendChild(folderNameElement);
                             foldersContainer.appendChild(folderDiv);
                         });
                         attachFolderClickEventListeners(); // Reattach folder click event listeners
@@ -315,6 +329,7 @@
                 }
             }
         });
+
 
         // Open upload popup
         document.getElementById('open-upload-popup').addEventListener('click', function () {

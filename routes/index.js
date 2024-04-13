@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp'); // Import sharp for image processing
 const { isArray } = require('util');
+const { count } = require('console');
 
 router.get('/', function (req, res, next) {
   res.redirect('/home');
@@ -51,7 +52,22 @@ router.get('/files', async (req, res, next) => {
   try {
     // Fetch file information from MongoDB
     const folders = await Folder.find({});
-    let files = await File.find({ folder: "home" }); // Fetch files for the logged-in user only
+
+    // Calculate the count of files for each folder
+    const folderFileCounts = await Promise.all(
+      folders.map(async (folder) => {
+        const count = await File.countDocuments({ folder: folder.name });
+        return { folderId: folder._id, count };
+      })
+    );
+
+    // Construct a map of folder IDs to file counts
+    const folderFileCountMap = new Map();
+    folderFileCounts.forEach((item) => {
+      folderFileCountMap.set(item.folderId.toString(), item.count);
+    });
+
+    const files = await File.find({ folder: "home" }); // Fetch files for the logged-in user only
 
     // Calculate total file size before deletion
     let totalFileSizeBytes = 0;
@@ -60,14 +76,14 @@ router.get('/files', async (req, res, next) => {
     });
     const totalFileSizeMB = (totalFileSizeBytes / (1024 * 1024)).toFixed(2);
 
-
     // Render the template with both folders and files data
-    res.render('files', { title: 'Upload File', username: req.session.username, folders, files, totalFileSizeMB });
+    res.render('files', { title: 'Upload File', username: req.session.username, folders, files, totalFileSizeMB, folderFileCountMap });
   } catch (error) {
     console.error(error);
     res.status(500).send('Internal Server Error');
   }
 });
+
 
 // Define a route to calculate the total file size
 router.get('/files/totalFileSize', async (req, res) => {
@@ -275,7 +291,6 @@ router.post('/moveFile', async (req, res) => {
 
 
 // Assuming you have routes set up in your Express.js app
-// POST route to handle adding a new folder
 router.post('/folders', async (req, res) => {
   const { name, username } = req.body;
   if (!name || !username) {
@@ -294,13 +309,19 @@ router.post('/folders', async (req, res) => {
   if (!newFolder) {
     return res.status(400).json({ success: false, message: 'Failed to add folder' });
   }
+
   const folders = await Folder.find({ user: username });
 
-  const fileFolderFind = await File.find({ folder: "home" });
+  const folderFileCounts = await Promise.all(
+    folders.map(async (folder) => {
+      const count = await File.countDocuments({ folder: folder.name });
+      return { folderId: folder._id, name: folder.name, count, hasFiles: count > 0 }; // Include folder name in the response
+    })
+  );
 
-  const infolder = await Folder.find({ name: fileFolderFind });
+  console.log(folderFileCounts);
 
-  res.json({ success: true, message: 'Folder added successfully', folders, infolder });
+  res.json({ success: true, message: 'Folder added successfully', folders: folderFileCounts });
 });
 
 
