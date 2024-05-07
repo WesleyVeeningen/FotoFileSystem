@@ -34,15 +34,18 @@
         <div class="overflow-x-auto rela folders-container ml-4 flex flex-wrap gap-5">
             <% folders.forEach(folder=> { %>
                 <div class="flex items-center space-x-5 cursor-pointer folder-name relative"
-                    id="folder-button-<%= folder._id %>" data-folder-id="<%= folder._id %>">
+                    id="folder-button-<%= folder._id %>">
                     <% if (folderFileCountMap.get(folder._id.toString())> 0) { %>
                         <img src="/media/icons8-opened-folder.svg" alt="">
                         <% } else { %>
                             <img src="/media/icons8-folder.svg" alt="">
                             <% } %>
                                 <div>
-                                    <p class="font-medium folder-text">
-                                        <%= folder.name %>
+                                    <p class="font-medium">
+                                        <span class="folder-text folder" data-folder-id="<%= folder._id %>">
+                                            <%= folder.name %>
+                                        </span><i onclick='deleteFolder("<%= folder._id %>")'
+                                            class="fa-solid m-1 text-xs hidden delete-folder text-red-500 fa-x"></i>
                                     </p>
                                     <p class="text-sm text-gray-500">
                                         <%= folderFileCountMap.get(folder._id.toString()) %> files
@@ -55,7 +58,9 @@
 
         <table class="hidden w-full mt-8">
             <thead>
-                <h1 id="folderTitle" class="text-xl font-bold"></h1>
+                <tr>
+                    <th id="folderTitle" colspan="8" class="text-xl font-bold"></th>
+                </tr>
                 <tr>
                     <th>Thumbnail</th>
                     <th>Name</th>
@@ -63,16 +68,17 @@
                     <th>Size</th>
                     <th>Created At</th>
                     <th>Origin Date</th>
-                    <th>user</th> <!-- New column -->
+                    <th>User</th>
                     <th>Actions</th>
                 </tr>
             </thead>
+
             <tbody>
                 <!-- Files will be dynamically added here -->
             </tbody>
         </table>
 
-        <div id="files-table">
+        <div id="files-table" class="files-table">
 
         </div>
 
@@ -118,7 +124,6 @@
             </div>
         </div>
     </div>
-    <script src="/node_modules/flowbite/dist/flowbite.min"></script>
 
 
     <script defer>
@@ -147,6 +152,54 @@
             });
         });
 
+
+        // Delete folder
+        // Delete folder
+        async function deleteFolder(FolderId) {
+            try {
+                const response = await fetch(`/folders/${FolderId}`, {
+                    method: 'DELETE',
+                });
+                const data = await response.json();
+                if (data.success) {
+                    // Folder deleted successfully, update the UI or perform any other necessary actions
+                    console.log('Folder deleted successfully');
+                    // Remove the deleted folder from the UI
+                    const folderButton = document.getElementById(`folder-button-${FolderId}`);
+                    if (folderButton) {
+                        folderButton.remove();
+                    }
+                } else {
+                    console.error('Failed to delete folder:', data.message);
+                }
+            } catch (error) {
+                console.error('An error occurred while deleting the folder:', error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const folderNameElements = document.querySelectorAll('.folder-name');
+
+            folderNameElements.forEach(folderNameElement => {
+                folderNameElement.addEventListener('mouseover', function () {
+                    const deleteIcon = this.querySelector('.delete-folder');
+                    if (deleteIcon) {
+                        deleteIcon.classList.remove('hidden');
+                    }
+                });
+
+                folderNameElement.addEventListener('mouseout', function () {
+                    const deleteIcon = this.querySelector('.delete-folder');
+                    if (deleteIcon) {
+                        deleteIcon.classList.add('hidden');
+                    }
+                });
+            });
+        });
+
+
+
+        // Example usage: deleteFolder('folderName');
 
         // Close the image popup when user clicks outside of it
 
@@ -194,8 +247,9 @@
                     const response = await fetch(`/files/${folderText}`); // Fetch files based on folder name
                     const files = await response.json();
                     displayFiles(files);
-                    document.getElementById('folder').textContent = 'Folder ' + folderName; // Update folder title
+                    document.getElementById('folderTitle').textContent = 'Files in ' + folderText; // Update folder title
                 });
+
             });
         }
 
@@ -211,7 +265,10 @@
 
             // Check if the files array is empty
             if (files.length === 0) {
-                console.log('No files found');
+                const folderTextElement = document.querySelector('.files-table');
+                if (folderTextElement) {
+                    folderTextElement.textContent = 'No files found in this folder.';
+                }
                 return;
             }
 
@@ -293,8 +350,6 @@
         addFolderBtn.addEventListener('click', async function () {
             const folderName = prompt('Enter folder name:');
             const username = '<%= username %>'; // Assuming 'username' is a server-side variable
-            console.log(folderName);
-            console.log(username);
             if (folderName) {
                 const response = await fetch('/folders', {
                     method: 'POST',
@@ -312,14 +367,33 @@
                         foldersContainer.innerHTML = '';
                         data.folders.forEach(folder => {
                             const folderDiv = document.createElement('div');
-                            folderDiv.classList.add('rounded-lg', 'flex', 'items-center', 'cursor-pointer', 'folder-name'); // Add ml-5 class here
+                            folderDiv.classList.add('flex', 'items-center', 'space-x-5', 'cursor-pointer', 'folder-name', 'relative');
+                            folderDiv.id = `folder-button-${folder._id}`;
                             folderDiv.setAttribute('data-folder-id', folder._id);
-                            const folderIcon = document.createElement('p');
-                            folderIcon.innerHTML = `<img src="/media/${folder.hasFiles ? 'icons8-opened-folder.svg' : 'icons8-folder.svg'}">`; // Use conditional operator to determine folder icon
+
+                            // Create folder icon
+                            const folderIcon = document.createElement('img');
+                            folderIcon.src = `/media/${folder.hasFiles ? 'icons8-opened-folder.svg' : 'icons8-folder.svg'}`;
+                            folderIcon.alt = '';
                             folderDiv.appendChild(folderIcon);
+
+                            // Create folder text container
+                            const folderTextContainer = document.createElement('div');
+                            folderTextContainer.classList.add('font-medium', 'folder-text');
+
+                            // Create folder name element
                             const folderNameElement = document.createElement('p');
                             folderNameElement.textContent = folder.name;
-                            folderDiv.appendChild(folderNameElement);
+                            folderTextContainer.appendChild(folderNameElement);
+
+                            // Create files count element
+                            const filesCountElement = document.createElement('p');
+                            filesCountElement.classList.add('text-sm', 'text-gray-500');
+                            filesCountElement.textContent = `${folder.count} files`;
+                            folderTextContainer.appendChild(filesCountElement);
+
+                            folderDiv.appendChild(folderTextContainer);
+
                             foldersContainer.appendChild(folderDiv);
                         });
                         attachFolderClickEventListeners(); // Reattach folder click event listeners

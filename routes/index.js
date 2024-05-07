@@ -23,6 +23,64 @@ router.get('/home', async function (req, res, next) {
 
 
 
+router.delete('/folders/:id', async (req, res) => {
+  try {
+    const FolderID = req.params.id;
+
+    console.log('Folder ID:', FolderID);
+
+    const folderName = await Folder.findById(FolderID);
+
+    // Find the folder by name
+    const folder = await Folder.findOneAndDelete({ _id: FolderID });
+
+    if (!folder) {
+      return res.status(404).json({ success: false, message: 'Folder not found.' });
+    }
+
+    // Find files belonging to the specified folder
+    const files = await File.find({
+      folder: FolderID
+    });
+
+    // Delete the image files from the folder
+    files.forEach(file => {
+      const imagePath = path.join(__dirname, `../public/uploads/${folderName}/${file.name}`);
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+      }
+
+      // Delete the thumbnail from the thumbnails folder
+      const thumbnailPath = path.join(__dirname, `../public/uploads/${folderName}/thumbnail/thumbnail_${file.name}`);
+      if (fs.existsSync(thumbnailPath)) {
+        fs.unlinkSync(thumbnailPath);
+      }
+    });
+
+
+    // Delete the files from the database
+    await File.deleteMany({
+      folder: folderName
+    });
+
+    // Recalculate total file size after deletion
+    let totalFileSizeBytes = 0;
+    const userFiles = await File.find({ user: req.session.username });
+    userFiles.forEach(file => {
+      totalFileSizeBytes += file.size;
+    });
+    const totalFileSizeMB = (totalFileSizeBytes / (1024 * 1024)).toFixed(2);
+
+    
+
+    res.json({ success: true, message: 'Folder deleted successfully.', totalFileSizeMB });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Internal Server Error' });
+  }
+});
+
 
 
 

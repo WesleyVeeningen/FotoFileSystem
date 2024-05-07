@@ -87,6 +87,7 @@ router.post('/register', async (req, res) => {
             }
         });
 
+
         // Define email options
         const mailOptions = {
             from: 'fotofilesysteem@gmail.com',
